@@ -1,13 +1,13 @@
 use datawarehousing_example_nyc_vehicle_incidents::{
-    base_database::{crash::Crash, person::Person},
-    raw::{crashes::RawCrashRecord, moon::RawMoonRecord, persons::RawPersonRecord},
+    base_database::time::Time,
+    raw::{moon::RawMoonRecord, weather::RawWeatherRecord},
 };
-use std::collections::HashSet;
 
 fn main() {
-    let xs = RawMoonRecord::load_from_csv("data/moon.csv").into_iter();
+    let raw_moon = RawMoonRecord::load_from_csv("data/moon.csv");
+    let raw_weather = RawWeatherRecord::load_from_csv("data/weather.csv");
 
-    for x in xs {
+    for x in Time::from(raw_weather, raw_moon) {
         println!("{x:?}");
     }
 }
