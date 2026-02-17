@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 pub struct Person {
-    pub person_id: String,
+    pub person_id: u32,
     pub person_type: Option<PersonType>,
     pub person_age: Option<u8>,
     pub person_sex: Option<PersonSex>,
@@ -55,7 +55,7 @@ pub enum PersonRole {
 impl From<RawPersonRecord> for Person {
     fn from(raw: RawPersonRecord) -> Self {
         Person {
-            person_id: raw.unique_id,
+            person_id: raw.unique_id.parse().unwrap(),
             person_type: raw.person_type.as_deref().and_then(extract_person_type),
             person_age: raw.person_age,
             person_sex: raw.person_sex.and_then(extract_sex),
