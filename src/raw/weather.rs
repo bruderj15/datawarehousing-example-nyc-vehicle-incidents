@@ -1,5 +1,6 @@
 use time::{OffsetDateTime, format_description::well_known};
 
+/// https://www.kaggle.com/datasets/aadimator/nyc-weather-2016-to-2022
 #[derive(Debug, Clone)]
 pub struct RawWeatherRecord {
     pub time: OffsetDateTime,

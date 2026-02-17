@@ -1,5 +1,6 @@
 use time::{Date, Time, macros::format_description};
 
+/// https://dev.socrata.com/foundry/data.cityofnewyork.us/h9gi-nx95
 #[derive(Debug, Clone)]
 pub struct RawCrashRecord {
     pub collision_id: u32,

@@ -1,5 +1,6 @@
 use time::{Date, Time, macros::format_description};
 
+/// https://dev.socrata.com/foundry/data.cityofnewyork.us/f55k-p6yu
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RawPersonRecord {
     pub unique_id: String,
