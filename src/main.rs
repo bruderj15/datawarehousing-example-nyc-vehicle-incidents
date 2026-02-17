@@ -1,8 +1,14 @@
-use datawarehousing_example_nyc_vehicle_incidents::raw::crashes::RawCrashRecord;
+use datawarehousing_example_nyc_vehicle_incidents::{
+    base_database::person::Person, raw::persons::RawPersonRecord,
+};
+use std::collections::HashSet;
 
 fn main() {
-    let xs = RawCrashRecord::load_from_csv("data/crashes_preview.csv");
-    for x in xs.iter().take(10) {
-        println!("{:?}", x);
+    let xs = RawPersonRecord::load_from_csv("data/persons.csv")
+        .into_iter()
+        .map(Person::from);
+
+    for x in xs {
+        println!("{x:?}");
     }
 }

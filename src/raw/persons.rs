@@ -1,8 +1,8 @@
 use time::{Date, Time, macros::format_description};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RawPersonRecord {
-    pub person_id: String,
+    pub unique_id: String,
     pub collision_id: u32,
     pub crash_date: Date,
     pub crash_time: Time,
@@ -27,7 +27,7 @@ impl RawPersonRecord {
         for result in rdr.records() {
             let string_record = result.unwrap();
             let record = RawPersonRecord {
-                person_id: string_record[4].into(),
+                unique_id: string_record[0].into(),
                 collision_id: string_record[1].parse().unwrap(),
                 crash_date: time::Date::parse(&string_record[2], &date_fmt).unwrap(),
                 crash_time: time::Time::parse(&string_record[3], &time_fmt).unwrap(),
