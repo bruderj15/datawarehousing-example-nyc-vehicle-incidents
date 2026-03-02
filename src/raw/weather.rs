@@ -7,6 +7,8 @@ pub struct RawWeatherRecord {
     pub temperature: f32,
     pub precipitation: f32,
     pub rain: f32,
+    pub cloudcover: f32,
+    pub windspeed: f32,
 }
 
 impl RawWeatherRecord {
@@ -24,6 +26,8 @@ impl RawWeatherRecord {
                 temperature: string_record[1].parse().unwrap(),
                 precipitation: string_record[2].parse().unwrap(),
                 rain: string_record[3].parse().unwrap(),
+                cloudcover: string_record[4].parse().unwrap(),
+                windspeed: string_record[8].parse().unwrap(),
             };
             records.push(record);
         }

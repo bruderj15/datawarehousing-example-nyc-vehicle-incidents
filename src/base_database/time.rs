@@ -9,9 +9,7 @@ pub struct Time {
     pub time_id: u32,
     pub timestamp: OffsetDateTime,
     pub moon_phase: Option<MoonPhase>,
-    pub temperature: Option<f32>,
-    pub precipitation: Option<f32>,
-    pub rain: Option<f32>,
+    pub weather: Option<Weather>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -25,6 +23,52 @@ pub enum MoonPhase {
     WaningGibbous,
     LastQuarter,
     WaningCrescent,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum Weather {
+    Clear,
+    Cloudy,
+    RainyLight,
+    RainyHeavy,
+    Stormy,
+    Windy,
+    Miscallaneous,
+}
+
+/// | Condition   | Logic                      |
+/// | ----------- | -------------------------- |
+/// | Clear       | Cloud < 20% AND Precip = 0 |
+/// | Cloudy      | Cloud ≥ 60% AND Precip = 0 |
+/// | Rainy Light | Rain ≤ 2.5                 |
+/// | Rainy Heavy | Rain > 2.5                 |
+/// | Stormy      | Rain > 7.5 AND Wind > 40   |
+/// | Windy       | Wind > 40 AND Rain = 0     |
+impl From<&RawWeatherRecord> for Weather {
+    fn from(raw_weather: &RawWeatherRecord) -> Self {
+        if raw_weather.precipitation == 0.0 && raw_weather.rain == 0.0 {
+            if raw_weather.cloudcover < 20.0 {
+                Weather::Clear
+            } else if raw_weather.cloudcover >= 60.0 {
+                Weather::Cloudy
+            } else {
+                Weather::Miscallaneous
+            }
+        } else if raw_weather.rain <= 2.5 {
+            Weather::RainyLight
+        } else if raw_weather.rain > 2.5 {
+            if raw_weather.windspeed > 40.0 {
+                Weather::Stormy
+            } else {
+                Weather::RainyHeavy
+            }
+        } else if raw_weather.windspeed > 40.0 && raw_weather.rain == 0.0 {
+            Weather::Windy
+        } else {
+            Weather::Miscallaneous
+        }
+    }
 }
 
 impl Time {
@@ -49,9 +93,7 @@ impl Time {
                 time_id: i as u32,
                 timestamp,
                 moon_phase: moon.copied(),
-                temperature: weather.map(|weather| weather.temperature),
-                precipitation: weather.map(|weather| weather.precipitation),
-                rain: weather.map(|weather| weather.rain),
+                weather: weather.map(Weather::from),
             }
         })
         .collect()
