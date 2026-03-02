@@ -19,6 +19,14 @@ pub struct Crash {
     pub crash_factor_3: Option<CrashFactor>,
     pub crash_factor_4: Option<CrashFactor>,
     pub crash_factor_5: Option<CrashFactor>,
+    pub time_id: Option<u32>,
+}
+
+impl Crash {
+    pub fn with_time_id(mut self, time_id: u32) -> Self {
+        self.time_id = Some(time_id);
+        self
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -100,6 +108,7 @@ impl From<RawCrashRecord> for Crash {
             crash_factor_3: extract_contributing_factor(&raw.contributing_factor_vehicle_3),
             crash_factor_4: extract_contributing_factor(&raw.contributing_factor_vehicle_4),
             crash_factor_5: extract_contributing_factor(&raw.contributing_factor_vehicle_5),
+            time_id: None,
         }
     }
 }
