@@ -14,11 +14,7 @@ pub struct Crash {
     pub crash_cyclist_killed: u16,
     pub crash_motorist_injured: u16,
     pub crash_motorist_killed: u16,
-    pub crash_factor_1: Option<CrashFactor>,
-    pub crash_factor_2: Option<CrashFactor>,
-    pub crash_factor_3: Option<CrashFactor>,
-    pub crash_factor_4: Option<CrashFactor>,
-    pub crash_factor_5: Option<CrashFactor>,
+    pub crash_factor: Option<CrashFactor>,
     pub time_id: Option<u32>,
 }
 
@@ -103,11 +99,19 @@ impl From<RawCrashRecord> for Crash {
             crash_cyclist_killed: raw.number_of_cyclist_killed,
             crash_motorist_injured: raw.number_of_motorist_injured,
             crash_motorist_killed: raw.number_of_motorist_killed,
-            crash_factor_1: extract_contributing_factor(&raw.contributing_factor_vehicle_1),
-            crash_factor_2: extract_contributing_factor(&raw.contributing_factor_vehicle_2),
-            crash_factor_3: extract_contributing_factor(&raw.contributing_factor_vehicle_3),
-            crash_factor_4: extract_contributing_factor(&raw.contributing_factor_vehicle_4),
-            crash_factor_5: extract_contributing_factor(&raw.contributing_factor_vehicle_5),
+            crash_factor: extract_contributing_factor(&raw.contributing_factor_vehicle_1)
+                .or(extract_contributing_factor(
+                    &raw.contributing_factor_vehicle_2,
+                ))
+                .or(extract_contributing_factor(
+                    &raw.contributing_factor_vehicle_3,
+                ))
+                .or(extract_contributing_factor(
+                    &raw.contributing_factor_vehicle_4,
+                ))
+                .or(extract_contributing_factor(
+                    &raw.contributing_factor_vehicle_5,
+                )),
             time_id: None,
         }
     }
