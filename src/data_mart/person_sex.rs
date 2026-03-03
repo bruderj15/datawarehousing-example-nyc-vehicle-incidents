@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumCount as EnumCountMacro;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, EnumCountMacro)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, EnumCountMacro)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum PersonSexType {
     Male,

@@ -3,7 +3,7 @@ use time::{Date, OffsetDateTime, macros::format_description};
 
 use crate::base_database;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Time {
     pub time_id: u32,
     pub timestamp: OffsetDateTime,
