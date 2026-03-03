@@ -13,12 +13,12 @@ pub struct Fact {
     pub time_id: u32,
 
     // measures
-    pub persons_injured: u16,
-    pub persons_killed: u16,
-    pub pedestrians_injured: u16,
-    pub pedestrians_killed: u16,
-    pub cyclist_injured: u16,
-    pub cyclist_killed: u16,
-    pub motorist_injured: u16,
-    pub motorist_killed: u16,
+    pub persons_injured: u8,
+    pub persons_killed: u8,
+    pub pedestrians_injured: u8,
+    pub pedestrians_killed: u8,
+    pub cyclist_injured: u8,
+    pub cyclist_killed: u8,
+    pub motorist_injured: u8,
+    pub motorist_killed: u8,
 }
