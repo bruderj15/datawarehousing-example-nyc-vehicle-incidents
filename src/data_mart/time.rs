@@ -6,6 +6,7 @@ use crate::base_database;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Time {
     pub time_id: u32,
+    #[serde(with = "time::serde::rfc3339")]
     pub timestamp: OffsetDateTime,
 
     // default hierarchy

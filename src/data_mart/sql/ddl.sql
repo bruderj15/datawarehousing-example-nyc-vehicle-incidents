@@ -271,6 +271,9 @@ CREATE INDEX IX_DimContributingFactor_Category
 -- Degenerate dimension: none (crash_id is in the base DB, not carried here).
 -- =============================================================================
 CREATE TABLE dm.Fact (
+    -- Surrogate key
+    fact_id                 INT      NOT NULL,
+
     -- Dimension foreign keys
     contributing_factor_id  INT      NOT NULL,
     person_age_id           INT      NOT NULL,
@@ -289,6 +292,8 @@ CREATE TABLE dm.Fact (
     cyclist_killed          TINYINT  NOT NULL,
     motorist_injured        TINYINT  NOT NULL,
     motorist_killed         TINYINT  NOT NULL,
+
+    CONSTRAINT PK_Fact PRIMARY KEY CLUSTERED (fact_id),
 
     CONSTRAINT FK_Fact_Time
         FOREIGN KEY (time_id)

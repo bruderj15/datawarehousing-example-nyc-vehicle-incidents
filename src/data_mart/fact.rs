@@ -14,6 +14,9 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct Fact {
+    // surrogate key
+    pub fact_id: u32,
+
     // dimensions
     pub contributing_factor_id: u32,
     pub person_age_id: u32,
@@ -111,7 +114,8 @@ impl Fact {
 
         persons
             .into_iter()
-            .filter_map(|person| {
+            .enumerate()
+            .filter_map(|(i, person)| {
                 let crash = crash_by_id.get(&person.crash_id)?;
 
                 // Resolve time_id: crash carries a bdb time_id; map to dm time_id.
@@ -171,6 +175,7 @@ impl Fact {
                 let person_type_id = *type_by_type.get(&type_dm).unwrap_or(&0);
 
                 Some(Fact {
+                    fact_id: i as u32 + 1, // 1-indexed, 0 reserved as uninitialised sentinel
                     contributing_factor_id,
                     person_age_id,
                     person_position_id,
