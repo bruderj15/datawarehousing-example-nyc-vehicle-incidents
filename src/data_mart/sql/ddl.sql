@@ -6,6 +6,27 @@
 --   Fact table       : dm.Fact
 -- All surrogate keys are INT; 0 is reserved as the "Unknown" sentinel.
 -- =============================================================================
+-- PRIMARY ANALYTICS QUESTION
+--   Does a female person's menstrual-cycle phase (proxied by moon phase +
+--   fertile age group) correlate with incident severity, independent of
+--   weather and contributing-factor category?
+--
+-- INDEXING STRATEGY OVERVIEW
+--   Fact table  → Clustered Columnstore Index (CCI).
+--                 The fact table is wide, append-only, and queried exclusively
+--                 via large aggregating scans — the classic CCI use-case.
+--
+--   Dimensions  → Clustered B-tree PKs (small tables, point-lookup on SK is
+--                 the only access pattern the optimizer needs from them).
+--                 Selective non-clustered indexes are added only where the
+--                 analytical queries filter or group on non-SK columns with
+--                 meaningful cardinality.
+--
+--   Materialized view → One pre-aggregated indexed view at the grain of
+--                 (moon_phase × weather × factor_category × person_sex ×
+--                  age_group) collapses the multi-billion-row star join into
+--                 ~1 000 rows the reporting layer reads in probably microseconds.
+-- =============================================================================
 
 
 -- =============================================================================
@@ -16,19 +37,19 @@
 -- Denormalized weather attribute stored directly on the dimension row.
 -- =============================================================================
 CREATE TABLE dm.DimTime (
-    time_id                 INT              NOT NULL,
+    time_id                 INT               NOT NULL,
     [timestamp]             DATETIMEOFFSET(0) NOT NULL,
 
     -- Default hierarchy
-    hier_def_day            DATE             NOT NULL,
-    hier_def_month          VARCHAR(12)      NOT NULL,   -- e.g. 'January'
-    hier_def_year           SMALLINT         NOT NULL,
+    hier_def_day            DATE              NOT NULL,
+    hier_def_month          VARCHAR(12)       NOT NULL,   -- e.g. 'January'
+    hier_def_year           SMALLINT          NOT NULL,
 
     -- Moon-phase hierarchy
-    hier_moon_phase         VARCHAR(20)      NOT NULL,
+    hier_moon_phase         VARCHAR(20)       NOT NULL,
 
     -- Denormalized weather attribute
-    weather                 VARCHAR(20)      NOT NULL,
+    weather                 VARCHAR(20)       NOT NULL,
 
     CONSTRAINT PK_DimTime PRIMARY KEY CLUSTERED (time_id),
 
@@ -61,11 +82,26 @@ CREATE TABLE dm.DimTime (
     ))
 );
 
-CREATE INDEX IX_DimTime_Timestamp  ON dm.DimTime ([timestamp]);
-CREATE INDEX IX_DimTime_Day        ON dm.DimTime (hier_def_day);
-CREATE INDEX IX_DimTime_Year       ON dm.DimTime (hier_def_year);
-CREATE INDEX IX_DimTime_MoonPhase  ON dm.DimTime (hier_moon_phase);
-CREATE INDEX IX_DimTime_Weather    ON dm.DimTime (weather);
+
+-- Day range-scan for calendar-based slicing (e.g. "all of March").
+-- This is the finest temporal grain queries actually filter on.
+CREATE INDEX IX_DimTime_Day
+    ON dm.DimTime (hier_def_day);
+
+-- Composite: moon_phase leading, weather included.
+--   The primary research question always slices on moon_phase AND controls for
+--   weather simultaneously.  A single composite index satisfies both filter
+--   predicates and covers weather without a key lookup, making a separate
+--   IX_DimTime_Weather redundant.
+--   moon_phase leads because it has higher cardinality (9 values) than
+--   hier_def_year (handful of years), giving better selectivity up front.
+-- Thought: Wonder if this index is relevant as we have CCI Fact-Table
+CREATE INDEX IX_DimTime_MoonPhase_Weather
+    ON dm.DimTime (hier_moon_phase, weather)
+    INCLUDE (hier_def_year, hier_def_month);
+-- Note: hier_def_year / hier_def_month are INCLUDEd (not key columns) because
+--   queries group by them after filtering on phase+weather; they do not need
+--   to drive range ordering.
 
 
 -- =============================================================================
@@ -76,7 +112,7 @@ CREATE INDEX IX_DimTime_Weather    ON dm.DimTime (weather);
 CREATE TABLE dm.DimPersonAge (
     person_age_id               INT         NOT NULL,
     person_age                  TINYINT     NOT NULL,   -- 0 means "not known"
-    person_age_known            BIT         NOT NULL,
+    person_age_known            BIT         NOT NULL,   -- person_age != 0
     person_age_hier_def_group   VARCHAR(12) NOT NULL,
 
     CONSTRAINT PK_DimPersonAge PRIMARY KEY CLUSTERED (person_age_id),
@@ -171,16 +207,16 @@ CREATE TABLE dm.DimPersonType (
 
 -- =============================================================================
 -- Dimension: Contributing Factor
--- Hierarchy: factor → category → (typed sub-category)
+-- Hierarchy: factor → sub-category → category
 --
 --   Level 1 – contributing_factor            (leaf / most specific)
 --   Level 2 – contributing_factor_hier_def_subcategory
 --   Level 3 – contributing_factor_hier_def_category  (root / most general)
 -- =============================================================================
 CREATE TABLE dm.DimContributingFactor (
-    contributing_factor_id                  INT         NOT NULL,
-    contributing_factor                     VARCHAR(60) NOT NULL,
-    contributing_factor_hier_def_category   VARCHAR(25) NOT NULL,
+    contributing_factor_id                   INT         NOT NULL,
+    contributing_factor                      VARCHAR(60) NOT NULL,
+    contributing_factor_hier_def_category    VARCHAR(25) NOT NULL,
     contributing_factor_hier_def_subcategory VARCHAR(60) NOT NULL,
 
     CONSTRAINT PK_DimContributingFactor PRIMARY KEY CLUSTERED (contributing_factor_id),
@@ -257,9 +293,6 @@ CREATE TABLE dm.DimContributingFactor (
     ))
 );
 
-CREATE INDEX IX_DimContributingFactor_Category
-    ON dm.DimContributingFactor (contributing_factor_hier_def_category);
-
 
 -- =============================================================================
 -- Fact Table: Vehicle Incident Person
@@ -268,32 +301,52 @@ CREATE INDEX IX_DimContributingFactor_Category
 -- All measures are taken from the crash record the person belongs to,
 -- so they express the total impact of the crash each person was part of.
 --
--- Degenerate dimension: none (crash_id is in the base DB, not carried here).
+-- WHY CLUSTERED COLUMNSTORE (CCI) INSTEAD OF A CLUSTERED B-TREE:
+--   1. Access pattern: every analytical query performs a full or near-full
+--      scan of the fact table followed by aggregation (SUM/COUNT).  A B-tree
+--      clustered on a meaningless surrogate key (fact_id) gives zero range-scan
+--      benefit because fact_id has no relationship to any filter predicate.
+--   2. Compression: the CCI applies per-column compression (RLE + bit-packing).
+--      All FK columns are low-cardinality integers; compression ratios of
+--      10–20x are typical, drastically reducing I/O.
+--   3. Batch-mode execution: the query engine processes 900-row batches instead
+--      of row-by-row, yielding 5–100x CPU improvements for aggregate queries.
+--   4. Segment elimination: the CCI stores min/max metadata per row-group
+--      (~1 M rows).  Predicates on time_id, person_sex_id, etc. allow the
+--      engine to skip entire compressed segments without decompression.
+--   5. Write profile: a data-warehouse fact table is bulk-loaded periodically
+--      (ETL), not updated row-by-row.  Delta-store overhead from the CCI is
+--      negligible because loads are done in large batches.
+--
+--   The PRIMARY KEY is kept as NONCLUSTERED to preserve FK integrity and to
+--   support ETL upsert checks (existence lookups by surrogate key).  It is
+--   never used by analytical queries.
 -- =============================================================================
 CREATE TABLE dm.Fact (
     -- Surrogate key
-    fact_id                 INT      NOT NULL,
+    fact_id                 INT     NOT NULL,
 
     -- Dimension foreign keys
-    contributing_factor_id  INT      NOT NULL,
-    person_age_id           INT      NOT NULL,
-    person_position_id      INT      NOT NULL,
-    person_role_id          INT      NOT NULL,
-    person_sex_id           INT      NOT NULL,
-    person_type_id          INT      NOT NULL,
-    time_id                 INT      NOT NULL,
+    contributing_factor_id  INT     NOT NULL,
+    person_age_id           INT     NOT NULL,
+    person_position_id      INT     NOT NULL,
+    person_role_id          INT     NOT NULL,
+    person_sex_id           INT     NOT NULL,
+    person_type_id          INT     NOT NULL,
+    time_id                 INT     NOT NULL,
 
     -- Measures (additive)
-    persons_injured         TINYINT  NOT NULL,
-    persons_killed          TINYINT  NOT NULL,
-    pedestrians_injured     TINYINT  NOT NULL,
-    pedestrians_killed      TINYINT  NOT NULL,
-    cyclist_injured         TINYINT  NOT NULL,
-    cyclist_killed          TINYINT  NOT NULL,
-    motorist_injured        TINYINT  NOT NULL,
-    motorist_killed         TINYINT  NOT NULL,
+    persons_injured         TINYINT NOT NULL,
+    persons_killed          TINYINT NOT NULL,
+    pedestrians_injured     TINYINT NOT NULL,
+    pedestrians_killed      TINYINT NOT NULL,
+    cyclist_injured         TINYINT NOT NULL,
+    cyclist_killed          TINYINT NOT NULL,
+    motorist_injured        TINYINT NOT NULL,
+    motorist_killed         TINYINT NOT NULL,
 
-    CONSTRAINT PK_Fact PRIMARY KEY CLUSTERED (fact_id),
+    -- PK is NONCLUSTERED: the CCI (below) is the physical storage order.
+    CONSTRAINT PK_Fact PRIMARY KEY NONCLUSTERED (fact_id),
 
     CONSTRAINT FK_Fact_Time
         FOREIGN KEY (time_id)
@@ -335,23 +388,82 @@ CREATE TABLE dm.Fact (
     )
 );
 
--- Covering indexes to accelerate common analytical queries.
-CREATE INDEX IX_Fact_Time
-    ON dm.Fact (time_id)
-    INCLUDE (persons_injured, persons_killed);
+-- Physical storage: Clustered Columnstore Index.
 
-CREATE INDEX IX_Fact_PersonSex
-    ON dm.Fact (person_sex_id)
-    INCLUDE (persons_injured, persons_killed);
+-- All columns are implicitly included; no explicit column list is needed or
+-- desired — partial CCIs would prevent batch-mode on excluded columns.
+CREATE CLUSTERED COLUMNSTORE INDEX CCI_Fact
+    ON dm.Fact;
 
-CREATE INDEX IX_Fact_PersonAge
-    ON dm.Fact (person_age_id)
-    INCLUDE (persons_injured, persons_killed);
 
-CREATE INDEX IX_Fact_PersonType
-    ON dm.Fact (person_type_id)
-    INCLUDE (persons_injured, persons_killed);
+-- =============================================================================
+-- Materialized View: Severity by Moon Phase, Weather, Factor, Sex and Age Group
+--
+-- WHY THIS VIEW:
+--   The primary research question requires joining Fact to four dimensions
+--   (DimTime, DimPersonSex, DimPersonAge, DimContributingFactor) and then
+--   grouping by (moon_phase, weather, factor_category, person_sex, age_group).
+--   The combinatorial space of those five grouping columns has at most
+--   9 × 8 × 9 × 3 × 3 = 5832 distinct cells — tiny.
+--
+--   Pre-aggregating all additive severity measures into this view means:
+--     • Reports read ~6 000 rows instead of millions of fact rows.
+--     • Confounding-variable analysis (e.g. "hold weather constant, vary phase")
+--       is an in-memory operation on the view result set.
+--     • The indexed view is maintained incrementally by SQL Server; ETL
+--       refreshes propagate automatically with no manual refresh step.
+--
+-- SCOPE NOTE:
+--   incident_count counts fact rows (people) in each cell, not unique crashes.
+--   Severity sums are additive across the grain, consistent with the fact table
+--   definition.  Consumers who need crash-level counts must apply additional
+--   logic (not in scope of this mart layer).
+-- =============================================================================
+CREATE VIEW dm.MV_SeverityByMoonWeatherFactorSexAge
+WITH SCHEMABINDING
+AS
+    SELECT
+        -- Grouping dimensions (the five axes of the research question)
+        dt.hier_moon_phase                              AS moon_phase,
+        dt.weather                                      AS weather,
+        dcf.contributing_factor_hier_def_category       AS factor_category,
+        dps.person_sex                                  AS person_sex,
+        dpa.person_age_hier_def_group                   AS age_group,
 
-CREATE INDEX IX_Fact_ContributingFactor
-    ON dm.Fact (contributing_factor_id)
-    INCLUDE (persons_injured, persons_killed);
+        -- Severity measures (all additive — SUM is safe across the grain)
+        SUM(CAST(f.persons_injured     AS INT))         AS total_persons_injured,
+        SUM(CAST(f.persons_killed      AS INT))         AS total_persons_killed,
+        SUM(CAST(f.pedestrians_injured AS INT))         AS total_pedestrians_injured,
+        SUM(CAST(f.pedestrians_killed  AS INT))         AS total_pedestrians_killed,
+        SUM(CAST(f.cyclist_injured     AS INT))         AS total_cyclist_injured,
+        SUM(CAST(f.cyclist_killed      AS INT))         AS total_cyclist_killed,
+        SUM(CAST(f.motorist_injured    AS INT))         AS total_motorist_injured,
+        SUM(CAST(f.motorist_killed     AS INT))         AS total_motorist_killed,
+
+        -- Row count required by SQL Server for indexed view maintenance
+        COUNT_BIG(*)                                    AS incident_count
+
+    FROM dm.Fact                    AS f
+    JOIN dm.DimTime                 AS dt  ON dt.time_id                = f.time_id
+    JOIN dm.DimPersonSex            AS dps ON dps.person_sex_id         = f.person_sex_id
+    JOIN dm.DimPersonAge            AS dpa ON dpa.person_age_id         = f.person_age_id
+    JOIN dm.DimContributingFactor   AS dcf ON dcf.contributing_factor_id = f.contributing_factor_id
+
+    GROUP BY
+        dt.hier_moon_phase,
+        dt.weather,
+        dcf.contributing_factor_hier_def_category,
+        dps.person_sex,
+        dpa.person_age_hier_def_group;
+GO
+
+-- Unique clustered index — required by SQL Server to persist ("materialize")
+-- the view to disk.  The five grouping columns together form the natural key
+-- of the aggregated result set; uniqueness is guaranteed by the GROUP BY.
+-- Clustering on (moon_phase, weather) first matches the most common query
+-- pattern: "for each phase, controlling for weather, show severity".
+-- person_sex and age_group come next so that the FEMALE/FERTILE cohort can be
+-- isolated by a range seek without scanning the full view.
+CREATE UNIQUE CLUSTERED INDEX UCI_MV_SeverityByMoonWeatherFactorSexAge
+    ON dm.MV_SeverityByMoonWeatherFactorSexAge
+        (moon_phase, weather, person_sex, age_group, factor_category);
