@@ -9,7 +9,7 @@ use crate::base_database;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Time {
     pub time_id: u32,
-    #[serde(with = "sql_datetime2")]
+    #[serde(with = "sql_datetime")]
     pub timestamp: PrimitiveDateTime,
 
     // default hierarchy
@@ -108,7 +108,7 @@ impl From<base_database::time::Weather> for Weather {
     }
 }
 
-pub mod sql_datetime2 {
+pub mod sql_datetime {
     use time::{PrimitiveDateTime, format_description::BorrowedFormatItem};
 
     use super::*;

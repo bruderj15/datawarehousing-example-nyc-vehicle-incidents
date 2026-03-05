@@ -38,7 +38,7 @@
 -- =============================================================================
 CREATE TABLE project_julian_bruder_kenana_saeed.DimTime (
     time_id                 INT               NOT NULL,
-    [timestamp]             DATETIMEOFFSET(0) NOT NULL,
+    [timestamp]             datetime          NOT NULL,
 
     -- Default hierarchy
     hier_def_day            DATE              NOT NULL,
