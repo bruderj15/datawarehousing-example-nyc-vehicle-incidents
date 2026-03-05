@@ -2,12 +2,12 @@ use crate::raw::{moon::RawMoonRecord, weather::RawWeatherRecord};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use time::{Date, Duration, OffsetDateTime, macros::datetime};
+use time::{Date, Duration, PrimitiveDateTime, macros::date};
 
 #[derive(Debug, Clone)]
 pub struct Time {
     pub time_id: u32,
-    pub timestamp: OffsetDateTime,
+    pub timestamp: PrimitiveDateTime,
     pub moon_phase: Option<MoonPhase>,
     pub weather: Option<Weather>,
 }
@@ -76,11 +76,16 @@ impl Time {
         let moon = extract_moon_phases(raw_moon);
         let weather = raw_weather
             .into_iter()
-            .map(|raw_weather| (raw_weather.time, raw_weather))
+            .map(|raw_weather| {
+                (
+                    PrimitiveDateTime::new(raw_weather.time.date(), raw_weather.time.time()),
+                    raw_weather,
+                )
+            })
             .collect::<HashMap<_, _>>();
 
-        let start = datetime!(2000 - 01 - 01 0:00 UTC);
-        let end = datetime!(2022 - 12 - 31 0:00 UTC);
+        let start = PrimitiveDateTime::new(date!(2016 - 01 - 01), time::macros::time!(0:00));
+        let end = PrimitiveDateTime::new(date!(2022 - 12 - 31), time::macros::time!(23:59));
         std::iter::successors(Some(start), move |&dt| {
             let next = dt + Duration::hours(1);
             if next <= end { Some(next) } else { None }

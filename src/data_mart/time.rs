@@ -1,13 +1,16 @@
+use serde::de::Error;
 use serde::{Deserialize, Serialize};
-use time::{Date, OffsetDateTime, macros::format_description};
+use serde::{Deserializer, Serializer};
+use time::PrimitiveDateTime;
+use time::{Date, macros::format_description};
 
 use crate::base_database;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Time {
     pub time_id: u32,
-    #[serde(with = "time::serde::rfc3339")]
-    pub timestamp: OffsetDateTime,
+    #[serde(with = "sql_datetime2")]
+    pub timestamp: PrimitiveDateTime,
 
     // default hierarchy
     pub hier_def_day: Date,
@@ -102,5 +105,30 @@ impl From<base_database::time::Weather> for Weather {
             base_database::time::Weather::Windy => Weather::Windy,
             base_database::time::Weather::Miscallaneous => Weather::Miscallaneous,
         }
+    }
+}
+
+pub mod sql_datetime2 {
+    use time::{PrimitiveDateTime, format_description::BorrowedFormatItem};
+
+    use super::*;
+
+    const FORMAT: &[BorrowedFormatItem] =
+        format_description!("[year]-[month]-[day] [hour]:[minute]:[second]");
+
+    pub fn serialize<S>(date: &PrimitiveDateTime, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let s = date.format(&FORMAT).map_err(serde::ser::Error::custom)?;
+        serializer.serialize_str(&s)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<PrimitiveDateTime, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        PrimitiveDateTime::parse(&s, &FORMAT).map_err(D::Error::custom)
     }
 }

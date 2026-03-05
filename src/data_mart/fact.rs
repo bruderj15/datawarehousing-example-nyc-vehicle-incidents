@@ -10,6 +10,7 @@ use crate::data_mart::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use time::PrimitiveDateTime;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -109,7 +110,7 @@ impl Fact {
         // Secondary O(1) fallback: look up dm time_id directly by hour-truncated timestamp.
         // This avoids an O(n) linear scan for crashes whose bdb time_id wasn't matched
         // (e.g. crashes outside the weather data range).
-        let dm_time_by_timestamp: HashMap<time::OffsetDateTime, u32> =
+        let dm_time_by_timestamp: HashMap<PrimitiveDateTime, u32> =
             dim_times.iter().map(|t| (t.timestamp, t.time_id)).collect();
 
         persons

@@ -5,7 +5,6 @@ use datawarehousing_example_nyc_vehicle_incidents::{
         person_position::PersonPosition, person_role::PersonPositionRole, person_sex::PersonSex,
         person_type::PersonType, time::Time as DmTime,
     },
-    output::sql,
     raw::{
         crashes::RawCrashRecord, moon::RawMoonRecord, persons::RawPersonRecord,
         weather::RawWeatherRecord,
@@ -40,7 +39,7 @@ fn main() {
     println!("      time rows:   {}", bdb_times.len());
 
     // Build a lookup from truncated-hour timestamp → time_id for crash linking.
-    let time_lookup: std::collections::HashMap<time::OffsetDateTime, u32> =
+    let time_lookup: std::collections::HashMap<time::PrimitiveDateTime, u32> =
         bdb_times.iter().map(|t| (t.timestamp, t.time_id)).collect();
 
     let bdb_crashes: Vec<Crash> = raw_crashes
@@ -129,33 +128,6 @@ fn main() {
     write_json("data/output/dim_person_type.json", &dim_types);
     write_json("data/output/dim_contributing_factor.json", &dim_factors);
     write_json("data/output/fact.json", &facts);
-
-    // -- SQL INSERTs ---------------------------------------------------------
-    println!("[6/6] Writing SQL INSERT files to data/output/...");
-
-    sql::write_dim_time("data/output/dim_time.sql", &dm_times);
-    println!("      wrote data/output/dim_time.sql");
-
-    sql::write_dim_person_age("data/output/dim_person_age.sql", &dim_ages);
-    println!("      wrote data/output/dim_person_age.sql");
-
-    sql::write_dim_person_position("data/output/dim_person_position.sql", &dim_positions);
-    println!("      wrote data/output/dim_person_position.sql");
-
-    sql::write_dim_person_role("data/output/dim_person_role.sql", &dim_roles);
-    println!("      wrote data/output/dim_person_role.sql");
-
-    sql::write_dim_person_sex("data/output/dim_person_sex.sql", &dim_sexes);
-    println!("      wrote data/output/dim_person_sex.sql");
-
-    sql::write_dim_person_type("data/output/dim_person_type.sql", &dim_types);
-    println!("      wrote data/output/dim_person_type.sql");
-
-    sql::write_dim_contributing_factor("data/output/dim_contributing_factor.sql", &dim_factors);
-    println!("      wrote data/output/dim_contributing_factor.sql");
-
-    sql::write_fact("data/output/fact.sql", &facts);
-    println!("      wrote data/output/fact.sql");
 
     println!("Done.");
 }

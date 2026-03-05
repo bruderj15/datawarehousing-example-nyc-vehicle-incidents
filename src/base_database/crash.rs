@@ -1,11 +1,11 @@
 use crate::raw::crashes::RawCrashRecord;
 use serde::{Deserialize, Serialize};
-use time::{OffsetDateTime, PrimitiveDateTime, UtcOffset};
+use time::PrimitiveDateTime;
 
 #[derive(Debug, Clone)]
 pub struct Crash {
     pub crash_id: u32,
-    pub crash_timestamp: OffsetDateTime,
+    pub crash_timestamp: PrimitiveDateTime,
     pub crash_persons_injured: u16,
     pub crash_persons_killed: u16,
     pub crash_pedestrians_injured: u16,
@@ -89,8 +89,7 @@ impl From<RawCrashRecord> for Crash {
     fn from(raw: RawCrashRecord) -> Self {
         Self {
             crash_id: raw.collision_id,
-            crash_timestamp: PrimitiveDateTime::new(raw.crash_date, raw.crash_time)
-                .assume_offset(UtcOffset::UTC),
+            crash_timestamp: PrimitiveDateTime::new(raw.crash_date, raw.crash_time),
             crash_persons_injured: raw.number_of_persons_injured,
             crash_persons_killed: raw.number_of_persons_killed,
             crash_pedestrians_injured: raw.number_of_pedestrians_injured,
