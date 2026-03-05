@@ -119,7 +119,7 @@ async fn main() {
     // -----------------------------------------------------------------------
     fs::create_dir_all("data/output").expect("failed to create data/output directory");
 
-    println!("[5/7] Writing JSON files to data/output/...");
+    println!("[5/7] Writing JSON and CSV files to data/output/...");
 
     write_json("data/output/dim_time.json", &dm_times);
     write_json("data/output/dim_person_age.json", &dim_ages);
@@ -129,6 +129,48 @@ async fn main() {
     write_json("data/output/dim_person_type.json", &dim_types);
     write_json("data/output/dim_contributing_factor.json", &dim_factors);
     write_json("data/output/fact.json", &facts);
+
+    // CSV — dim_time needs special treatment because `time::Date` and
+    // `PrimitiveDateTime` do not serialise to a flat string by default.
+    // We convert each row to a helper struct that holds pre-formatted strings.
+    write_csv(
+        "data/output/dim_time.csv",
+        dm_times
+            .iter()
+            .map(|t| {
+                use time::macros::format_description;
+                let date_fmt = format_description!("[year]-[month]-[day]");
+                CsvTime {
+                    time_id: t.time_id,
+                    timestamp: format!(
+                        "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
+                        t.timestamp.year(),
+                        t.timestamp.month() as u8,
+                        t.timestamp.day(),
+                        t.timestamp.hour(),
+                        t.timestamp.minute(),
+                        t.timestamp.second(),
+                    ),
+                    hier_def_day: t
+                        .hier_def_day
+                        .format(&date_fmt)
+                        .expect("failed to format hier_def_day"),
+                    hier_def_month: t.hier_def_month.clone(),
+                    hier_def_year: t.hier_def_year,
+                    hier_moon_phase: t.hier_moon_phase,
+                    weather: t.weather,
+                }
+            })
+            .collect::<Vec<_>>()
+            .as_slice(),
+    );
+    write_csv("data/output/dim_person_age.csv", &dim_ages);
+    write_csv("data/output/dim_person_position.csv", &dim_positions);
+    write_csv("data/output/dim_person_role.csv", &dim_roles);
+    write_csv("data/output/dim_person_sex.csv", &dim_sexes);
+    write_csv("data/output/dim_person_type.csv", &dim_types);
+    write_csv("data/output/dim_contributing_factor.csv", &dim_factors);
+    write_csv("data/output/fact.csv", &facts);
 
     // -----------------------------------------------------------------------
     // Stage 6: Set up database schema (DDL)
@@ -204,6 +246,34 @@ fn write_json<T: serde::Serialize>(path: &str, data: &T) {
     let json = serde_json::to_string_pretty(data).expect("failed to serialize to JSON");
     fs::write(path, json).unwrap_or_else(|e| panic!("failed to write {path}: {e}"));
     println!("      wrote {path}");
+}
+
+fn write_csv<T: serde::Serialize>(path: &str, rows: &[T]) {
+    let mut wtr = csv::Writer::from_path(path)
+        .unwrap_or_else(|e| panic!("failed to create CSV writer for {path}: {e}"));
+    for row in rows {
+        wtr.serialize(row)
+            .unwrap_or_else(|e| panic!("failed to serialize row to {path}: {e}"));
+    }
+    wtr.flush()
+        .unwrap_or_else(|e| panic!("failed to flush CSV writer for {path}: {e}"));
+    println!("      wrote {path}");
+}
+
+/// A CSV-serialisable mirror of [`datawarehousing_example_nyc_vehicle_incidents::data_mart::time::Time`].
+///
+/// The original struct contains `time::Date` and `time::PrimitiveDateTime` which
+/// do not flatten to a single CSV column with their default serde representations.
+/// Here every temporal field is pre-formatted as a plain `String`.
+#[derive(serde::Serialize)]
+struct CsvTime {
+    time_id: u32,
+    timestamp: String,
+    hier_def_day: String,
+    hier_def_month: String,
+    hier_def_year: u16,
+    hier_moon_phase: datawarehousing_example_nyc_vehicle_incidents::data_mart::time::MoonPhase,
+    weather: datawarehousing_example_nyc_vehicle_incidents::data_mart::time::Weather,
 }
 
 /// Reads database credentials from environment variables.
