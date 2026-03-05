@@ -27,7 +27,7 @@ const BATCH_SIZE: usize = 1_000;
 
 pub fn write_dim_time(path: &str, rows: &[Time]) {
     let columns = "time_id, [timestamp], hier_def_day, hier_def_month, hier_def_year, hier_moon_phase, weather";
-    let table = "dm.DimTime";
+    let table = "project_julian_bruder_kenana_saeed.DimTime";
     write_batched(path, table, columns, rows, |row, buf| {
         write!(
             buf,
@@ -46,7 +46,7 @@ pub fn write_dim_time(path: &str, rows: &[Time]) {
 
 pub fn write_dim_person_age(path: &str, rows: &[PersonAge]) {
     let columns = "person_age_id, person_age, person_age_known, person_age_hier_def_group";
-    let table = "dm.DimPersonAge";
+    let table = "project_julian_bruder_kenana_saeed.DimPersonAge";
     write_batched(path, table, columns, rows, |row, buf| {
         write!(
             buf,
@@ -62,7 +62,7 @@ pub fn write_dim_person_age(path: &str, rows: &[PersonAge]) {
 
 pub fn write_dim_person_position(path: &str, rows: &[PersonPosition]) {
     let columns = "person_position_id, person_position";
-    let table = "dm.DimPersonPosition";
+    let table = "project_julian_bruder_kenana_saeed.DimPersonPosition";
     write_batched(path, table, columns, rows, |row, buf| {
         write!(
             buf,
@@ -76,7 +76,7 @@ pub fn write_dim_person_position(path: &str, rows: &[PersonPosition]) {
 
 pub fn write_dim_person_role(path: &str, rows: &[PersonPositionRole]) {
     let columns = "person_role_id, person_role";
-    let table = "dm.DimPersonRole";
+    let table = "project_julian_bruder_kenana_saeed.DimPersonRole";
     write_batched(path, table, columns, rows, |row, buf| {
         write!(
             buf,
@@ -90,7 +90,7 @@ pub fn write_dim_person_role(path: &str, rows: &[PersonPositionRole]) {
 
 pub fn write_dim_person_sex(path: &str, rows: &[PersonSex]) {
     let columns = "person_sex_id, person_sex";
-    let table = "dm.DimPersonSex";
+    let table = "project_julian_bruder_kenana_saeed.DimPersonSex";
     write_batched(path, table, columns, rows, |row, buf| {
         write!(
             buf,
@@ -104,7 +104,7 @@ pub fn write_dim_person_sex(path: &str, rows: &[PersonSex]) {
 
 pub fn write_dim_person_type(path: &str, rows: &[PersonType]) {
     let columns = "person_type_id, person_type";
-    let table = "dm.DimPersonType";
+    let table = "project_julian_bruder_kenana_saeed.DimPersonType";
     write_batched(path, table, columns, rows, |row, buf| {
         write!(
             buf,
@@ -118,7 +118,7 @@ pub fn write_dim_person_type(path: &str, rows: &[PersonType]) {
 
 pub fn write_dim_contributing_factor(path: &str, rows: &[ContributingFactorDim]) {
     let columns = "contributing_factor_id, contributing_factor, contributing_factor_hier_def_category, contributing_factor_hier_def_subcategory";
-    let table = "dm.DimContributingFactor";
+    let table = "project_julian_bruder_kenana_saeed.DimContributingFactor";
     write_batched(path, table, columns, rows, |row, buf| {
         write!(
             buf,
@@ -143,7 +143,7 @@ pub fn write_fact(path: &str, rows: &[Fact]) {
         "cyclist_injured, cyclist_killed, ",
         "motorist_injured, motorist_killed"
     );
-    let table = "dm.Fact";
+    let table = "project_julian_bruder_kenana_saeed.Fact";
     write_batched(path, table, columns, rows, |row, buf| {
         write!(
             buf,

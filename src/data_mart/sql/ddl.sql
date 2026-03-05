@@ -2,8 +2,8 @@
 -- Data Mart DDL  –  NYC Vehicle Incidents Star Schema
 -- =============================================================================
 -- Naming conventions:
---   Dimension tables : dm.<DimName>
---   Fact table       : dm.Fact
+--   Dimension tables : project_julian_bruder_kenana_saeed.<DimName>
+--   Fact table       : project_julian_bruder_kenana_saeed.Fact
 -- All surrogate keys are INT; 0 is reserved as the "Unknown" sentinel.
 -- =============================================================================
 -- PRIMARY ANALYTICS QUESTION
@@ -36,7 +36,7 @@
 --   Moon     : timestamp → moon_phase
 -- Denormalized weather attribute stored directly on the dimension row.
 -- =============================================================================
-CREATE TABLE dm.DimTime (
+CREATE TABLE project_julian_bruder_kenana_saeed.DimTime (
     time_id                 INT               NOT NULL,
     [timestamp]             DATETIMEOFFSET(0) NOT NULL,
 
@@ -86,7 +86,7 @@ CREATE TABLE dm.DimTime (
 -- Day range-scan for calendar-based slicing (e.g. "all of March").
 -- This is the finest temporal grain queries actually filter on.
 CREATE INDEX IX_DimTime_Day
-    ON dm.DimTime (hier_def_day);
+    ON project_julian_bruder_kenana_saeed.DimTime (hier_def_day);
 
 -- Composite: moon_phase leading, weather included.
 --   The primary research question always slices on moon_phase AND controls for
@@ -97,7 +97,7 @@ CREATE INDEX IX_DimTime_Day
 --   hier_def_year (handful of years), giving better selectivity up front.
 -- Thought: Wonder if this index is relevant as we have CCI Fact-Table
 CREATE INDEX IX_DimTime_MoonPhase_Weather
-    ON dm.DimTime (hier_moon_phase, weather)
+    ON project_julian_bruder_kenana_saeed.DimTime (hier_moon_phase, weather)
     INCLUDE (hier_def_year, hier_def_month);
 -- Note: hier_def_year / hier_def_month are INCLUDEd (not key columns) because
 --   queries group by them after filtering on phase+weather; they do not need
@@ -109,7 +109,7 @@ CREATE INDEX IX_DimTime_MoonPhase_Weather
 -- Hierarchy: age → age_group (Fertile / Infertile / Unknown)
 -- Row 0 is the "age unknown" sentinel.
 -- =============================================================================
-CREATE TABLE dm.DimPersonAge (
+CREATE TABLE project_julian_bruder_kenana_saeed.DimPersonAge (
     person_age_id               INT         NOT NULL,
     person_age                  TINYINT     NOT NULL,   -- 0 means "not known"
     person_age_known            BIT         NOT NULL,   -- person_age != 0
@@ -128,7 +128,7 @@ CREATE TABLE dm.DimPersonAge (
 -- =============================================================================
 -- Dimension: Person Position in Vehicle
 -- =============================================================================
-CREATE TABLE dm.DimPersonPosition (
+CREATE TABLE project_julian_bruder_kenana_saeed.DimPersonPosition (
     person_position_id      INT         NOT NULL,
     person_position         VARCHAR(10) NOT NULL,
 
@@ -148,7 +148,7 @@ CREATE TABLE dm.DimPersonPosition (
 -- =============================================================================
 -- Dimension: Person Role
 -- =============================================================================
-CREATE TABLE dm.DimPersonRole (
+CREATE TABLE project_julian_bruder_kenana_saeed.DimPersonRole (
     person_role_id      INT         NOT NULL,
     person_role         VARCHAR(20) NOT NULL,
 
@@ -172,7 +172,7 @@ CREATE TABLE dm.DimPersonRole (
 -- =============================================================================
 -- Dimension: Person Sex
 -- =============================================================================
-CREATE TABLE dm.DimPersonSex (
+CREATE TABLE project_julian_bruder_kenana_saeed.DimPersonSex (
     person_sex_id   INT         NOT NULL,
     person_sex      VARCHAR(10) NOT NULL,
 
@@ -189,7 +189,7 @@ CREATE TABLE dm.DimPersonSex (
 -- =============================================================================
 -- Dimension: Person Type
 -- =============================================================================
-CREATE TABLE dm.DimPersonType (
+CREATE TABLE project_julian_bruder_kenana_saeed.DimPersonType (
     person_type_id  INT         NOT NULL,
     person_type     VARCHAR(20) NOT NULL,
 
@@ -213,7 +213,7 @@ CREATE TABLE dm.DimPersonType (
 --   Level 2 – contributing_factor_hier_def_subcategory
 --   Level 3 – contributing_factor_hier_def_category  (root / most general)
 -- =============================================================================
-CREATE TABLE dm.DimContributingFactor (
+CREATE TABLE project_julian_bruder_kenana_saeed.DimContributingFactor (
     contributing_factor_id                   INT         NOT NULL,
     contributing_factor                      VARCHAR(60) NOT NULL,
     contributing_factor_hier_def_category    VARCHAR(25) NOT NULL,
@@ -322,7 +322,7 @@ CREATE TABLE dm.DimContributingFactor (
 --   support ETL upsert checks (existence lookups by surrogate key).  It is
 --   never used by analytical queries.
 -- =============================================================================
-CREATE TABLE dm.Fact (
+CREATE TABLE project_julian_bruder_kenana_saeed.Fact (
     -- Surrogate key
     fact_id                 INT     NOT NULL,
 
@@ -350,31 +350,31 @@ CREATE TABLE dm.Fact (
 
     CONSTRAINT FK_Fact_Time
         FOREIGN KEY (time_id)
-        REFERENCES dm.DimTime (time_id),
+        REFERENCES project_julian_bruder_kenana_saeed.DimTime (time_id),
 
     CONSTRAINT FK_Fact_PersonAge
         FOREIGN KEY (person_age_id)
-        REFERENCES dm.DimPersonAge (person_age_id),
+        REFERENCES project_julian_bruder_kenana_saeed.DimPersonAge (person_age_id),
 
     CONSTRAINT FK_Fact_PersonPosition
         FOREIGN KEY (person_position_id)
-        REFERENCES dm.DimPersonPosition (person_position_id),
+        REFERENCES project_julian_bruder_kenana_saeed.DimPersonPosition (person_position_id),
 
     CONSTRAINT FK_Fact_PersonRole
         FOREIGN KEY (person_role_id)
-        REFERENCES dm.DimPersonRole (person_role_id),
+        REFERENCES project_julian_bruder_kenana_saeed.DimPersonRole (person_role_id),
 
     CONSTRAINT FK_Fact_PersonSex
         FOREIGN KEY (person_sex_id)
-        REFERENCES dm.DimPersonSex (person_sex_id),
+        REFERENCES project_julian_bruder_kenana_saeed.DimPersonSex (person_sex_id),
 
     CONSTRAINT FK_Fact_PersonType
         FOREIGN KEY (person_type_id)
-        REFERENCES dm.DimPersonType (person_type_id),
+        REFERENCES project_julian_bruder_kenana_saeed.DimPersonType (person_type_id),
 
     CONSTRAINT FK_Fact_ContributingFactor
         FOREIGN KEY (contributing_factor_id)
-        REFERENCES dm.DimContributingFactor (contributing_factor_id),
+        REFERENCES project_julian_bruder_kenana_saeed.DimContributingFactor (contributing_factor_id),
 
     CONSTRAINT CK_Fact_NonNegative CHECK (
         persons_injured     >= 0 AND
@@ -393,7 +393,7 @@ CREATE TABLE dm.Fact (
 -- All columns are implicitly included; no explicit column list is needed or
 -- desired — partial CCIs would prevent batch-mode on excluded columns.
 CREATE CLUSTERED COLUMNSTORE INDEX CCI_Fact
-    ON dm.Fact;
+    ON project_julian_bruder_kenana_saeed.Fact;
 
 
 -- =============================================================================
@@ -419,7 +419,7 @@ CREATE CLUSTERED COLUMNSTORE INDEX CCI_Fact
 --   definition.  Consumers who need crash-level counts must apply additional
 --   logic (not in scope of this mart layer).
 -- =============================================================================
-CREATE VIEW dm.MV_SeverityByMoonWeatherFactorSexAge
+CREATE VIEW project_julian_bruder_kenana_saeed.MV_SeverityByMoonWeatherFactorSexAge
 WITH SCHEMABINDING
 AS
     SELECT
@@ -443,11 +443,11 @@ AS
         -- Row count required by SQL Server for indexed view maintenance
         COUNT_BIG(*)                                    AS incident_count
 
-    FROM dm.Fact                    AS f
-    JOIN dm.DimTime                 AS dt  ON dt.time_id                = f.time_id
-    JOIN dm.DimPersonSex            AS dps ON dps.person_sex_id         = f.person_sex_id
-    JOIN dm.DimPersonAge            AS dpa ON dpa.person_age_id         = f.person_age_id
-    JOIN dm.DimContributingFactor   AS dcf ON dcf.contributing_factor_id = f.contributing_factor_id
+    FROM project_julian_bruder_kenana_saeed.Fact                    AS f
+    JOIN project_julian_bruder_kenana_saeed.DimTime                 AS dt  ON dt.time_id                = f.time_id
+    JOIN project_julian_bruder_kenana_saeed.DimPersonSex            AS dps ON dps.person_sex_id         = f.person_sex_id
+    JOIN project_julian_bruder_kenana_saeed.DimPersonAge            AS dpa ON dpa.person_age_id         = f.person_age_id
+    JOIN project_julian_bruder_kenana_saeed.DimContributingFactor   AS dcf ON dcf.contributing_factor_id = f.contributing_factor_id
 
     GROUP BY
         dt.hier_moon_phase,
@@ -465,5 +465,5 @@ GO
 -- person_sex and age_group come next so that the FEMALE/FERTILE cohort can be
 -- isolated by a range seek without scanning the full view.
 CREATE UNIQUE CLUSTERED INDEX UCI_MV_SeverityByMoonWeatherFactorSexAge
-    ON dm.MV_SeverityByMoonWeatherFactorSexAge
+    ON project_julian_bruder_kenana_saeed.MV_SeverityByMoonWeatherFactorSexAge
         (moon_phase, weather, person_sex, age_group, factor_category);
