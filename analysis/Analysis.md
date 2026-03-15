@@ -111,6 +111,9 @@ ORDER BY
 - **Chart Type:** Clustered Bar Chart. This allows you to easily compare the severity across moon
   phases within each specific weather cluster.
 
+**SSAS / PowerPivot Visualization:**
+![images/Q1_A.png](images/Q1_A.png)
+
 ---
 
 ### Q2: Does injury severity among crash participants vary systematically by weather conditions, independent of sex and age group?
@@ -222,6 +225,9 @@ ORDER BY
   different demographics will move largely in parallel as they cross the weather categories on the
   X-axis.
 
+**SSAS / PowerPivot Visualization:**
+![images/Q2_A.png](images/Q2_A.png)
+
 ---
 
 ### Q3: Is the distribution of crash severity among female participants stable across years, regardless of moon phase?
@@ -295,6 +301,9 @@ ORDER BY
 - **Chart Type:** 100% Stacked Column Chart (if looking at absolute distribution of severity) or a
   Multi-line Chart (if looking at average severity stability). A flat horizontal trend across years
   for each moon phase indicates stability.
+
+**SSAS / PowerPivot Visualization:**
+![images/Q3_A.png](images/Q3_A.png)
 
 ---
 
@@ -399,6 +408,9 @@ ORDER BY
 - **Chart Type:** 100% Stacked Column Chart. Display values as "% of Grand Total" mapped to Row
   Total. This provides an immediate visual representation of whether the proportion of factors (
   e.g., 'SUBSTANCE_RELATED' vs 'HUMAN_BEHAVIOR') expands or shrinks during a full moon.
+
+**SSAS / PowerPivot Visualization:**
+![images/Q4_A.png](images/Q4_A.png)
 
 ---
 
@@ -509,3 +521,9 @@ ORDER BY
   chart is highly effective here: configure one radar web for 'FERTILE' and one for 'INFERTILE'.
   Plot the moon phases around the axes, and use different lines for weather conditions. Any massive
   divergence in shape between the two charts instantly proves the stratification hypothesis.
+
+**SSAS / PowerPivot Visualization Fertile:**
+![images/Q5_A_FERTILE.png](images/Q5_A_FERTILE.png)
+
+**SSAS / PowerPivot Visualization Infertile:**
+![images/Q5_A_INFERTILE.png](images/Q5_A_INFERTILE.png)
