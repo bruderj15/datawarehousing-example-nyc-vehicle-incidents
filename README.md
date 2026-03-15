@@ -209,7 +209,7 @@ The star schema was designed around a single provocative hypothesis:
 > correlate with incident severity, independent of weather and contributing-factor category?**
 
 The "moon phase as menstrual proxy" concept rests on the folk-biological claim that menstrual cycles
-synchronize with the ~29.5-day lunar cycle. Modern meta-analyses (e.g., Komada et al., 2021) have
+synchronize with the ~29.5-day lunar cycle. Modern meta-analyses (e.g., [Komada Y, Sato M, Ikeda Y, Kami A, Masuda C, Shibata S. The Relationship between the Lunar Phase, Menstrual Cycle Onset and Subjective Sleep Quality among Women of Reproductive Age, 2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC8003924/)) have
 largely debunked strict lunar–menstrual synchrony, but the hypothesis remains a useful analytical
 exercise because it forces multidimensional stratification across several confounding dimensions
 (weather, contributing factor, age, sex) — exactly the kind of analysis a data warehouse is built
