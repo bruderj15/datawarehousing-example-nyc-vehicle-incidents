@@ -1,6 +1,0 @@
-Dimensions:
-- Gender
-- Age
-- Time (parallel hierarchy with Moon)
-- Weather: Clear, Cloudy, Rainy, Light, Rainy heavy, Stormy, Windy
-- Contributing-Factors
