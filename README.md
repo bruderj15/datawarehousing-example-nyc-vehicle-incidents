@@ -1,3 +1,130 @@
+# NYC Vehicle Incidents Data Warehouse (2016–2022)
+
+[![Rust](https://img.shields.io/badge/Rust-000000?style=flat&logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![MSSQL](https://img.shields.io/badge/MSSQL-CC2927?style=flat&logo=microsoft-sql-server&logoColor=white)](https://www.microsoft.com/en-us/sql-server)
+[![SSAS](https://img.shields.io/badge/SSAS-0078D4?style=flat&logo=microsoft&logoColor=white)](https://learn.microsoft.com/en-us/analysis-services/)
+[![PowerPivot](https://img.shields.io/badge/PowerPivot-217346?style=flat&logo=microsoft-excel&logoColor=white)](https://support.microsoft.com/en-us/office/power-pivot-powerful-data-analysis-and-data-modeling-in-excel-a9a84720-bce5-441d-8ff7-04de038f658f)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## 📋 Overview
+
+This repository contains a complete **data warehouse implementation** analyzing 7+ years of New York City vehicle incident data (2016–2022). The project demonstrates enterprise data warehousing principles through:
+
+- A **star schema** designed around multidimensional analysis of crash severity, demographics, weather, and temporal patterns
+- **ETL pipelines** built in Rust for robust data loading and transformation
+- **OLAP cube** deployment to Microsoft SQL Server Analysis Services (SSAS)
+- **Interactive analysis** via Excel PowerPivot, supported by materialized views for near-instantaneous performance
+- **Comprehensive statistical analysis** investigating whether menstrual-cycle proxies (via moon phases) correlate with crash severity
+
+## 🛠️ Tech Stack
+
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| **ETL** | Rust + `csv`, `time` crates | High-performance data loading and transformation |
+| **Data Warehouse** | Microsoft SQL Server 2019+ | Fact and dimension tables (star schema) |
+| **OLAP** | SQL Server Analysis Services (SSAS) Multidimensional | Cube definition and MDX calculations |
+| **BI** | Excel PowerPivot + Power Query | Interactive pivot charts and dashboards |
+| **Documentation** | Markdown + SQL | Analysis narrative and reproducibility |
+
+## 📦 Prerequisites
+
+### 1. Data Files to Download
+
+The ETL pipeline requires three CSV datasets. Before running the Rust executable, download these files:
+
+#### A. **NYC Motor Vehicle Collisions – Crashes**
+- **Source:** [NYC Open Data – Motor Vehicle Collisions (Crashes)](https://data.cityofnewyork.us/resource/h9gi-nx95.csv)
+- **Place at:** `data/raw/crashes.csv`
+- **Fields used:** collision_id, crash_date, crash_time, persons injured/killed, contributing factors
+- **Download instructions:** Visit the link above, click "Export" → "CSV", or use the Socrata API
+
+#### B. **NYC Motor Vehicle Collisions – Persons**
+- **Source:** [NYC Open Data – Motor Vehicle Collisions (Persons)](https://data.cityofnewyork.us/resource/f55k-p6yu.csv)
+- **Place at:** `data/raw/persons.csv`
+- **Fields used:** collision_id, person_type, person_age, person_sex, person_position, person_ped_role
+- **Download instructions:** Same as above; both datasets are on the NYC Open Data portal
+
+#### C. **NYC Weather Data (2016–2022)**
+- **Source:** [Kaggle – NYC Weather 2016 to 2022](https://www.kaggle.com/datasets/aadimator/nyc-weather-2016-to-2022)
+- **Place at:** `data/raw/weather.csv`
+- **Fields used:** time (RFC3339), temperature, precipitation, rain, cloudcover, windspeed
+- **Download instructions:** Download from Kaggle; ensure the CSV includes UTC timestamps in RFC3339 format
+
+#### D. **Moon Phases (1900–2022)**
+- **Source:** [Kaggle – Primary Moon Phases UTC+7](https://www.kaggle.com/datasets/jodiemullins/1900-2022-primary-moon-phases-utc7-timezone)
+- **Place at:** `data/raw/moon_phases.csv`
+- **Fields used:** new_moon, first_quarter_moon, full_moon, third_quarter_moon (all M/D/YYYY format)
+- **Download instructions:** Download from Kaggle; filter to rows between 2016–2022
+
+### 2. Environment Setup
+
+**Prerequisites:**
+- **Rust 1.70+** (for ETL compilation)
+- **Microsoft SQL Server 2019+** (or Azure SQL Database)
+- **SQL Server Management Studio (SSMS)** (for schema deployment and T-SQL execution)
+- **Visual Studio 2019+** (for SSAS Multidimensional project, optional but recommended)
+- **Excel 2016+** (for PowerPivot connectivity; requires desktop version, not web)
+
+**Install Rust:**
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup toolchain install stable
+```
+
+## 🚀 Building and Running
+
+### Step 1: Prepare Data Files
+Follow the **Prerequisites** section above to download all four CSV files and place them in `data/raw/`.
+
+Verify structure:
+```bash
+ls -la data/raw/
+# crashes.csv
+# persons.csv
+# weather.csv
+# moon_phases.csv
+```
+
+### Step 2: Build the Rust ETL
+
+```bash
+cd datawarehousing-example-nyc-vehicle-incidents
+cargo build --release
+```
+
+The binary will be at `target/release/datawarehousing-example-nyc-vehicle-incidents` (or `.exe` on Windows).
+
+### Step 3: Configure Database Connection via environment variables
+```bash
+export DB_HOST=your_sql_server_host
+export DB_PORT=1433
+export DB_DATABASE=your_database_name
+export DB_USER=your_username
+export DB_DOMAIN=your_domain
+export DB_PASSWORD=your_password
+export DB_NAME=your_database_name
+```
+
+### Step 4: Run the ETL
+
+```bash
+cargo run --release
+```
+
+This will:
+1. Load and parse all four CSV files
+2. Transform and denormalize the data
+3. Generate and serialize CSV-Records to `data/output/`
+4. Run SQL Batch-Inserts with the data on the target MSSQL Server
+
+## 📊 Multidimensional Schema Diagram
+
+The dimensional model is designed around a **person-grained fact table**, enabling multidimensional analysis of crash severity across demographics, time, weather, and lunar phases.
+
+![MDM Schema: NYC Vehicle Incidents Data Warehouse](images/multi-dimensional-schema.drawio.png)
+
+---
+
 # NYC Vehicle Incidents Data Warehouse Analysis (2016–2022)
 
 This document provides a comprehensive, person-oriented analysis of the New York City vehicle
@@ -950,3 +1077,27 @@ Given the dataset's strengths, more promising research directions include:
 *Analysis prepared for the Master-Course in Data Warehousing, HTWK Leipzig.*
 *Data: NYC Open Data — Motor Vehicle Collisions (Crashes and Persons), 2016–2022.*
 *Tools: Microsoft SQL Server, SSAS Multidimensional, Excel PowerPivot.*
+
+## 📝 License & Attribution
+
+This project is provided as-is for educational purposes under the **MIT License**.
+
+**Data Sources:**
+- [NYC Open Data – Motor Vehicle Collisions (Crashes)](https://data.cityofnewyork.us/resource/h9gi-nx95)
+- [NYC Open Data – Motor Vehicle Collisions (Persons)](https://data.cityofnewyork.us/resource/f55k-p6yu)
+- [Kaggle – NYC Weather 2016 to 2022](https://www.kaggle.com/datasets/aadimator/nyc-weather-2016-to-2022)
+- [Kaggle – Primary Moon Phases (1900–2022)](https://www.kaggle.com/datasets/jodiemullins/1900-2022-primary-moon-phases-utc7-timezone)
+
+**Course:** Master-Level Data Warehousing, HTWK Leipzig
+
+---
+
+## 🙏 Acknowledgments
+
+Built with ❤️ in **Rust**, **SQL**, and **curiosity**.
+
+**Technologies:**
+- ![Rust](https://img.shields.io/badge/Rust-000000?style=flat&logo=rust&logoColor=white) for robust data pipelines
+- ![MSSQL](https://img.shields.io/badge/MSSQL-CC2927?style=flat&logo=microsoft-sql-server&logoColor=white) for reliable warehousing
+- ![SSAS](https://img.shields.io/badge/SSAS-0078D4?style=flat&logo=microsoft&logoColor=white) for multidimensional analysis
+- ![Excel](https://img.shields.io/badge/Excel-217346?style=flat&logo=microsoft-excel&logoColor=white) for intuitive visualization
